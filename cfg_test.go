@@ -11,11 +11,12 @@ import (
 
 func TestAll(t *testing.T) {
 	type cc struct {
-		IntVal   int    `yaml:"intval" cmd:"intval|integer value" env:"INTVAL"`
-		Int64    int64  `yaml:"int64"cmd:"int64|integer 64 value " env:"INT64"`
-		StrVal   string `yaml:"strval" cmd:"strval" env:"STRVAL"`
-		IntSlice []int  `yaml:"int-slice" cmd:"intslice" env:"INTSLICE"`
-		Data     struct {
+		NoRewrite int    `yaml:"norw" cmd:"norw" env:"NORW"`
+		IntVal    int    `yaml:"intval" cmd:"intval|integer value" env:"INTVAL"`
+		Int64     int64  `yaml:"int64"cmd:"int64|integer 64 value " env:"INT64"`
+		StrVal    string `yaml:"strval" cmd:"strval" env:"STRVAL"`
+		IntSlice  []int  `yaml:"int-slice" cmd:"intslice" env:"INTSLICE"`
+		Data      struct {
 			Fl64    float64 `yaml:"fl-64" cmd:"float|how to use float" env:"FL64"`
 			BoolVal bool    `yaml:"bool-val" cmd:"bool|boolean value" env:"BOOL"`
 		}
@@ -30,6 +31,7 @@ func TestAll(t *testing.T) {
 	_ = os.Setenv("P_STRVAL", "some env string")
 
 	yamlData := []byte(`
+norw: 200
 intval: 10
 int64: 11
 strval: some string
@@ -51,11 +53,12 @@ data:
 	require.Equal(t, []int{1, 2, 3}, cfg.IntSlice)
 	require.Equal(t, 12.5, cfg.Data.Fl64)
 	require.Equal(t, true, cfg.Data.BoolVal)
+	require.Equal(t, 200, cfg.NoRewrite)
 
 	//then rewrite with flags
 	fset := flag.NewFlagSet("test", flag.ContinueOnError)
 
-	err = ConfigureFromFlags(cfg, fset, []string{
+	err = UnmarshalFromFlags(cfg, fset, []string{
 		"-intval", "11",
 		"-int64", "123",
 		"--strval=\"some string from cmd\"",
@@ -67,15 +70,17 @@ data:
 	require.Equal(t, "some string from cmd", cfg.StrVal)
 	require.Equal(t, []int{4, 5, 6}, cfg.IntSlice)
 	require.Equal(t, 12.4, cfg.Data.Fl64)
+	require.Equal(t, 200, cfg.NoRewrite)
 
 	//then rewrite with env vars
-	err = ConfigureFromEnvironment(cfg, "P_")
+	err = UnmarshalFromEnvironment(cfg, "P_")
 	require.NoError(t, err)
 	require.NoError(t, err)
 	require.Equal(t, 12, cfg.IntVal)
 	require.Equal(t, int64(90009), cfg.Int64)
 	require.Equal(t, []int{7, 8, 9}, cfg.IntSlice)
 	require.Equal(t, "some env string", cfg.StrVal)
+	require.Equal(t, 200, cfg.NoRewrite)
 }
 
 func TestGenEnv(t *testing.T) {

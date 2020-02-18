@@ -1,0 +1,10 @@
+intval: 10
+int64: 11
+strval: some string
+int-slice:
+  - 1
+  - 2
+  - 3
+data:
+  fl-64: 12.5
+  bool-val: yes

@@ -9,22 +9,22 @@ import (
 	"strings"
 )
 
-func Configure(container interface{}, envPrefix string, flagSet *flag.FlagSet, args []string) (err error) {
-	if err = ConfigureFromFlags(container, flagSet, args); err != nil {
+func Unmarshal(container interface{}, envPrefix string, flagSet *flag.FlagSet, args []string) (err error) {
+	if err = UnmarshalFromFlags(container, flagSet, args); err != nil {
 		return
 	}
-	if err = ConfigureFromEnvironment(container, envPrefix); err != nil {
+	if err = UnmarshalFromEnvironment(container, envPrefix); err != nil {
 		return
 	}
 	return
 }
 
-func ConfigureFromEnvironment(container interface{}, envPrefix string) (err error) {
+func UnmarshalFromEnvironment(container interface{}, envPrefix string) (err error) {
 	return getEnv(envPrefix, reflect.ValueOf(container).Elem())
 }
 
 //args: command line arguments which should not include the command name
-func ConfigureFromFlags(container interface{}, flagSet *flag.FlagSet, args []string) (err error) {
+func UnmarshalFromFlags(container interface{}, flagSet *flag.FlagSet, args []string) (err error) {
 	if err = initCmdFlags(reflect.ValueOf(container).Elem(), flagSet); err != nil {
 		return
 	}
@@ -75,32 +75,31 @@ func initCmdFlags(val reflect.Value, fs *flag.FlagSet) (err error) {
 
 		switch vkind := vf.Kind(); vkind {
 		case reflect.String:
-			fs.String(name, "", usage)
+			fs.String(name, vf.String(), usage)
 		case reflect.Int, reflect.Int64:
 			if vkind == reflect.Int64 {
-				fs.Int64(name, 0, usage)
+				fs.Int64(name, vf.Int(), usage)
 			} else {
-				fs.Int(name, 0, usage)
+				fs.Int(name, int(vf.Int()), usage)
 			}
 		case reflect.Bool:
-			fs.Bool(name, false, usage)
+			fs.Bool(name, vf.Bool(), usage)
 		case reflect.Slice:
 			switch svk := vf.Type().Elem().Kind(); svk {
 			case reflect.Int:
-				fs.Var(&intSliceValue{}, name, usage)
+				isv := intSliceValue(vf.Interface().([]int))
+				fs.Var(&isv, name, usage)
 			//TODO more cases with another types
 			default:
 				err = fmt.Errorf("initCmdFlags:%s: unsupported slice type: %v", name, svk)
 				return
 			}
 		case reflect.Float64:
-			fs.Float64(name, 0.0, usage)
-
+			fs.Float64(name, vf.Float(), usage)
 		default:
 			err = fmt.Errorf("initCmdFlags:%s: unsupported field kind: %s", name, vkind.String())
 			return
 		}
-
 	}
 
 	return
@@ -121,6 +120,7 @@ func parseCmdFlagString(flag string) (name string, usageString string) {
 }
 
 func getFlags(val reflect.Value, fs *flag.FlagSet) (err error) {
+
 	for i := 0; i < val.NumField(); i++ {
 		tf := val.Type().Field(i)
 		vf := val.Field(i)
@@ -137,10 +137,19 @@ func getFlags(val reflect.Value, fs *flag.FlagSet) (err error) {
 				err = fmt.Errorf("lookup by name %s finished unsuccessfuly", name)
 				return
 			}
+			//fmt.Printf("name:%s\n", name)
+
 			getter, ok := ff.Value.(flag.Getter)
 			if !ok {
 				err = fmt.Errorf("%s can't cast to getter", name)
 				return
+			}
+			if name == "norw" {
+				fmt.Printf("%#v\n", ff)
+				fmt.Printf("%#v\n", ff.Value.(flag.Getter).Get())
+			}
+			if getter.Get() == nil {
+				continue
 			}
 			if str, ok := getter.Get().(string); ok {
 				vf.Set(reflect.ValueOf(strings.Trim(str, " \t\n\r'\"`")))
