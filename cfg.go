@@ -9,12 +9,37 @@ import (
 	"strings"
 )
 
+func Configure(container interface{}, envPrefix string, flagSet *flag.FlagSet, args []string) (err error) {
+	if err = ConfigureFromFlags(container, flagSet, args); err != nil {
+		return
+	}
+	if err = ConfigureFromEnvironment(container, envPrefix); err != nil {
+		return
+	}
+	return
+}
+
+func ConfigureFromEnvironment(container interface{}, envPrefix string) (err error) {
+	return getEnv(envPrefix, reflect.ValueOf(container).Elem())
+}
+
+//args: command line arguments which should not include the command name
+func ConfigureFromFlags(container interface{}, flagSet *flag.FlagSet, args []string) (err error) {
+	if err = initCmdFlags(reflect.ValueOf(container).Elem(), flagSet); err != nil {
+		return
+	}
+	if err = flagSet.Parse(args); err != nil {
+		return
+	}
+	if err = getFlags(reflect.ValueOf(container).Elem(), flagSet); err != nil {
+		return
+	}
+	return
+}
+
 const envSep = "="
 const envTag = "env"
 const cmdRag = "cmd"
-
-//len of array after splitting one environment variable string
-const fieldLen = 2
 
 type intSliceValue []int
 

@@ -22,16 +22,6 @@ func TestAll(t *testing.T) {
 	}
 
 	cfg := &cc{}
-	fset := flag.NewFlagSet("test", flag.ContinueOnError)
-	err := initCmdFlags(reflect.ValueOf(cfg).Elem(), fset)
-	require.NoError(t, err)
-	err = fset.Parse([]string{
-		"-intval", "11",
-		"-int64", "123",
-		"--strval=\"some string from cmd\"",
-		"-float", "12.4",
-		"-intslice", "4,5,6"})
-	require.NoError(t, err)
 
 	_ = os.Setenv("P_INTVAL", "12")
 	_ = os.Setenv("P_INT64", "90009")
@@ -53,7 +43,7 @@ data:
 `)
 
 	//start with yaml
-	err = yaml.Unmarshal(yamlData, &cfg)
+	err := yaml.Unmarshal(yamlData, &cfg)
 	require.NoError(t, err)
 	require.Equal(t, 10, cfg.IntVal)
 	require.Equal(t, int64(11), cfg.Int64)
@@ -63,7 +53,14 @@ data:
 	require.Equal(t, true, cfg.Data.BoolVal)
 
 	//then rewrite with flags
-	err = getFlags(reflect.ValueOf(cfg).Elem(), fset)
+	fset := flag.NewFlagSet("test", flag.ContinueOnError)
+
+	err = ConfigureFromFlags(cfg, fset, []string{
+		"-intval", "11",
+		"-int64", "123",
+		"--strval=\"some string from cmd\"",
+		"-float", "12.4",
+		"-intslice", "4,5,6"})
 	require.NoError(t, err)
 	require.Equal(t, 11, cfg.IntVal)
 	require.Equal(t, int64(123), cfg.Int64)
@@ -72,7 +69,7 @@ data:
 	require.Equal(t, 12.4, cfg.Data.Fl64)
 
 	//then rewrite with env vars
-	err = getEnv("P_", reflect.ValueOf(cfg).Elem())
+	err = ConfigureFromEnvironment(cfg, "P_")
 	require.NoError(t, err)
 	require.NoError(t, err)
 	require.Equal(t, 12, cfg.IntVal)
