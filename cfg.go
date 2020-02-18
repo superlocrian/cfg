@@ -1,7 +1,6 @@
 package cfg
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"os"
@@ -10,7 +9,7 @@ import (
 	"strings"
 )
 
-const envSep = '='
+const envSep = "="
 const envTag = "env"
 const cmdRag = "cmd"
 
@@ -118,7 +117,12 @@ func getFlags(val reflect.Value, fs *flag.FlagSet) (err error) {
 				err = fmt.Errorf("%s can't cast to getter", name)
 				return
 			}
-			vf.Set(reflect.ValueOf(getter.Get()))
+			if str, ok := getter.Get().(string); ok {
+				vf.Set(reflect.ValueOf(strings.Trim(str, " \t\n\r'\"`")))
+			} else {
+				vf.Set(reflect.ValueOf(getter.Get()))
+			}
+
 		}
 	}
 	return
@@ -140,12 +144,9 @@ func getEnv(pref string, val reflect.Value) (err error) {
 			if tagVal != "" {
 				varname := pref + tagVal
 				for _, e := range os.Environ() {
-					var pair [fieldLen][]byte
-					if pair, err = split([]byte(e), envSep); err != nil {
-						return
-					}
-					if varname == string(pair[0]) && len(pair[1]) > 0 {
-						stringValue := strings.ToLower(strings.Trim(string(pair[1]), " \n\t\r"))
+					pair := strings.SplitN(e, envSep, 2)
+					if varname == pair[0] && len(pair[1]) > 0 {
+						stringValue := strings.ToLower(strings.Trim(pair[1], " \n\t\r"))
 						if err = parse(vf, stringValue, tagVal); err != nil {
 							return
 						}
@@ -203,26 +204,6 @@ func parse(vf reflect.Value, stringValue string, tagVal string) (err error) {
 	default:
 		err = fmt.Errorf("parse: %s: unsupported field type: %s", tagVal, vkind.String())
 		return
-	}
-	return
-}
-
-func split(src []byte, separator byte) (dest [fieldLen][]byte, err error) {
-	var cnt int
-
-	for p := 0; p < len(src); cnt++ {
-		var col []byte
-		if idx := bytes.IndexByte(src[p:], separator); idx == -1 {
-			col = src[p:]
-			p = len(src)
-		} else {
-			col = src[p : p+idx]
-			p += idx + 1
-		}
-
-		if cnt < len(dest) {
-			dest[cnt] = col
-		}
 	}
 	return
 }
