@@ -72,11 +72,11 @@ func initCmdFlags(val reflect.Value, fs *flag.FlagSet) (err error) {
 			continue
 		}
 		name, usage := parseCmdFlagString(tf.Tag.Get(cmdRag))
-
+		if name == "" {
+			continue
+		}
 		switch vkind := vf.Kind(); vkind {
 		case reflect.String:
-
-			fmt.Printf("flag:%s dev: %v\n", name, vf.String())
 			fs.String(name, vf.String(), usage)
 		case reflect.Int, reflect.Int64:
 			if vkind == reflect.Int64 {
@@ -103,7 +103,6 @@ func initCmdFlags(val reflect.Value, fs *flag.FlagSet) (err error) {
 			return
 		}
 	}
-
 	return
 }
 
@@ -122,7 +121,6 @@ func parseCmdFlagString(flag string) (name string, usageString string) {
 }
 
 func getFlags(val reflect.Value, fs *flag.FlagSet) (err error) {
-
 	for i := 0; i < val.NumField(); i++ {
 		tf := val.Type().Field(i)
 		vf := val.Field(i)
@@ -134,21 +132,18 @@ func getFlags(val reflect.Value, fs *flag.FlagSet) (err error) {
 			continue
 		} else {
 			name, _ := parseCmdFlagString(tf.Tag.Get(cmdRag))
+			if name == "" {
+				continue
+			}
 			ff := fs.Lookup(name)
 			if ff == nil {
 				err = fmt.Errorf("lookup by name %s finished unsuccessfuly", name)
 				return
 			}
-			//fmt.Printf("name:%s\n", name)
-
 			getter, ok := ff.Value.(flag.Getter)
 			if !ok {
 				err = fmt.Errorf("%s can't cast to getter", name)
 				return
-			}
-			if name == "norw" {
-				fmt.Printf("%#v\n", ff)
-				fmt.Printf("%#v\n", ff.Value.(flag.Getter).Get())
 			}
 			if getter.Get() == nil {
 				continue
@@ -158,7 +153,6 @@ func getFlags(val reflect.Value, fs *flag.FlagSet) (err error) {
 			} else {
 				vf.Set(reflect.ValueOf(getter.Get()))
 			}
-
 		}
 	}
 	return
@@ -175,20 +169,19 @@ func getEnv(pref string, val reflect.Value) (err error) {
 			}
 			continue
 		} else {
-
-			tagVal := tf.Tag.Get(envTag)
-			if tagVal != "" {
-				varname := pref + tagVal
-				for _, e := range os.Environ() {
-					pair := strings.SplitN(e, envSep, 2)
-					if varname == pair[0] && len(pair[1]) > 0 {
-						stringValue := strings.ToLower(strings.Trim(pair[1], " \n\t\r"))
-						if err = parse(vf, stringValue, tagVal); err != nil {
-							return
-						}
+			tagVal := strings.Trim(tf.Tag.Get(envTag), " \n\t\r")
+			if tagVal == "" {
+				continue
+			}
+			varname := pref + tagVal
+			for _, e := range os.Environ() {
+				pair := strings.SplitN(e, envSep, 2)
+				if varname == pair[0] && len(pair[1]) > 0 {
+					stringValue := strings.ToLower(strings.Trim(pair[1], " \n\t\r"))
+					if err = parse(vf, stringValue, tagVal); err != nil {
+						return
 					}
 				}
-
 			}
 		}
 	}
@@ -210,10 +203,9 @@ func parse(vf reflect.Value, stringValue string, tagVal string) (err error) {
 			vf.Set(reflect.ValueOf(int(intval)))
 		}
 	case reflect.Bool:
+		vf.SetBool(false)
 		if stringValue == "true" || stringValue == "yes" || stringValue == "on" || stringValue == "1" {
 			vf.SetBool(true)
-		} else {
-			vf.SetBool(false)
 		}
 	case reflect.Slice:
 		switch svk := vf.Type().Elem().Kind(); svk {

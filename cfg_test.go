@@ -11,6 +11,7 @@ import (
 
 func TestAll(t *testing.T) {
 	type cc struct {
+		Empty     int
 		NoRewrite int    `yaml:"norw" cmd:"norw" env:"NORW"`
 		IntVal    int    `yaml:"intval" cmd:"intval|integer value" env:"INTVAL"`
 		Int64     int64  `yaml:"int64"cmd:"int64|integer 64 value " env:"INT64"`
