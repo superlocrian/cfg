@@ -75,6 +75,8 @@ func initCmdFlags(val reflect.Value, fs *flag.FlagSet) (err error) {
 
 		switch vkind := vf.Kind(); vkind {
 		case reflect.String:
+
+			fmt.Printf("flag:%s dev: %v\n", name, vf.String())
 			fs.String(name, vf.String(), usage)
 		case reflect.Int, reflect.Int64:
 			if vkind == reflect.Int64 {
