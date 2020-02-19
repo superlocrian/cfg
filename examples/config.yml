@@ -1,4 +1,4 @@
-intval: 10
+intval:
 int64: 11
 strval: some string
 int-slice:
