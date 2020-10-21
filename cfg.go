@@ -171,9 +171,11 @@ func getEnv(pref string, val reflect.Value) (err error) {
 			}
 			continue
 		case reflect.Ptr:
-			err = getEnv(pref, vf.Elem())
-			if err != nil {
-				return
+			if !vf.IsZero() {
+				err = getEnv(pref, vf.Elem())
+				if err != nil {
+					return
+				}
 			}
 			continue
 

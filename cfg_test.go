@@ -94,6 +94,7 @@ func TestGenEnv(t *testing.T) {
 		StrVal   string `env:"StrVal"`
 		IntSlice []int  `env:"IntSlice"`
 		StructPointer *Struct
+		NilPointer *Struct
 	}
 
 	cf := &cc{StructPointer: &Struct{}}
