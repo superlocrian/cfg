@@ -162,13 +162,22 @@ func getEnv(pref string, val reflect.Value) (err error) {
 	for i := 0; i < val.NumField(); i++ {
 		tf := val.Type().Field(i)
 		vf := val.Field(i)
-		if vf.Kind() == reflect.Struct {
+
+		switch vf.Kind() {
+		case reflect.Struct:
 			err = getEnv(pref, vf)
 			if err != nil {
 				return
 			}
 			continue
-		} else {
+		case reflect.Ptr:
+			err = getEnv(pref, vf.Elem())
+			if err != nil {
+				return
+			}
+			continue
+
+		default:
 			tagVal := strings.Trim(tf.Tag.Get(envTag), " \n\t\r")
 			if tagVal == "" {
 				continue
@@ -183,6 +192,7 @@ func getEnv(pref string, val reflect.Value) (err error) {
 					}
 				}
 			}
+
 		}
 	}
 	return

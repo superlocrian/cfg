@@ -86,23 +86,29 @@ data:
 
 func TestGenEnv(t *testing.T) {
 
+	type Struct struct {
+		Value int `env:"StructValue"`
+	}
 	type cc struct {
 		IntVal   int    `env:"IntVal"`
 		StrVal   string `env:"StrVal"`
 		IntSlice []int  `env:"IntSlice"`
+		StructPointer *Struct
 	}
 
-	cf := &cc{}
+	cf := &cc{StructPointer: &Struct{}}
 
 	_ = os.Setenv("IntVal", "11")
 	_ = os.Setenv("StrVal", "11")
 	_ = os.Setenv("IntSlice", "11,12,13")
+	_ = os.Setenv("StructValue", "100001")
 
 	err := getEnv("", reflect.ValueOf(cf).Elem())
 	require.NoError(t, err)
 	require.Equal(t, 11, cf.IntVal)
 	require.Equal(t, "11", cf.StrVal)
 	require.Equal(t, []int{11, 12, 13}, cf.IntSlice)
+	require.Equal(t, 100001, cf.StructPointer.Value)
 
 }
 
